@@ -1,0 +1,114 @@
+' =================================================================================================
+' 宏名称:     ConvertAllVlookupsInWorkbook_V2
+' 作者:       Gemini
+' 创建日期:   2025-10-16
+'
+' 功能描述:
+'   本宏用于实现Excel工作簿内公式的批量自动化修改。它会扫描当前活动工作簿中的所有
+'   工作表（数据源表 "热熔胶型聚乙烯热收缩带" 除外），查找所有引用了
+'   "热熔胶型聚乙烯热收缩带" 工作表的公式，并将其自动转换为使用
+'   "整数匹配" 逻辑的INDEX/MATCH公式。
+'
+'   原始VLOOKUP模式: VLOOKUP(查找值, 热熔胶型聚乙烯热收缩带!A:C, 3, FALSE)
+'   修改后INDEX/MATCH模式: INDEX(热熔胶型聚乙烯热收缩带!C:C, MATCH(INT(查找值), 热熔胶型聚乙烯热收缩带!D:D, 0))
+'
+' 使用方法:
+'   1. 【备份文件】在运行此宏之前，强烈建议您先保存并备份您的Excel文件，以防万一。
+'   2. 【打开VBA编辑器】在Excel中，按下快捷键 `Alt + F11`。
+'   3. 【插入模块】在VBA编辑器左侧的“工程”窗口中，找到您的工作簿名称，右键点击，
+'      选择“插入” -> “模块”。如果已有模块，可跳过此步。
+'   4. 【粘贴代码】将本文件中的所有代码完整地复制并粘贴到右侧空白的模块窗口中。
+'   5. 【运行宏】关闭VBA编辑器，返回Excel。按下快捷键 `Alt + F8`，在弹出的宏窗口中
+'      选择 "ConvertAllVlookupsInWorkbook_V2"，然后点击“运行”按钮。
+'   6. 【完成】宏会自动执行，并在结束后弹出消息框报告处理结果。
+'
+' 版本历史:
+'   V1.0 - 初始版本，实现全工作簿扫描和替换功能。
+'   V2.0 - 修复了当处理不含VLOOKUP的公式时，InStr函数因起始参数为0而导致的"运行错误5"。
+' =================================================================================================
+
+Sub ConvertAllVlookupsInWorkbook_V2()
+    ' === VBA Macro by Gemini (Version 2 - Corrected) ===
+
+    Dim ws As Worksheet
+    Dim cell As Range
+    Dim formulaCells As Range
+    Dim originalFormula As String
+    Dim newFormula As String
+    Dim lookupValue As String
+    Dim originalVlookupString As String
+    Dim newFunctionString As String
+    
+    Dim startMarker As String
+    Dim endMarker As String
+    
+    Dim posStart As Long
+    Dim posEnd As Long
+    Dim updatedCount As Long
+    Dim processedSheets As String
+    
+    startMarker = "VLOOKUP("
+    endMarker = ",热熔胶型聚乙烯热收缩带!A:C,3,FALSE)"
+    
+    If MsgBox("您确定要扫描整个工作簿，并将所有相关的VLOOKUP公式" & _
+              "修改为整数匹配模式吗？" & vbCrLf & vbCrLf & _
+              "建议在操作前备份文件。", _
+              vbQuestion + vbYesNo, "请确认操作") = vbNo Then
+        Exit Sub
+    End If
+
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    
+    updatedCount = 0
+    processedSheets = ""
+    
+    For Each ws In ThisWorkbook.Worksheets
+        If ws.Name <> "热熔胶型聚乙烯热收缩带" Then
+            On Error Resume Next
+            Set formulaCells = ws.UsedRange.SpecialCells(xlCellTypeFormulas)
+            On Error GoTo 0
+            
+            If Not formulaCells Is Nothing Then
+                For Each cell In formulaCells
+                    originalFormula = cell.Formula
+                    
+                    ' V2错误修正: 先查找起始标记，成功后再查找结束标记，避免错误
+                    posStart = InStr(1, originalFormula, startMarker, vbTextCompare)
+                    
+                    If posStart > 0 Then
+                        posEnd = InStr(posStart, originalFormula, endMarker, vbTextCompare)
+                        
+                        If posEnd > 0 Then
+                            lookupValue = Mid(originalFormula, posStart + Len(startMarker), posEnd - (posStart + Len(startMarker)))
+                            originalVlookupString = startMarker & lookupValue & endMarker
+                            newFunctionString = "INDEX(热熔胶型聚乙烯热收缩带!C:C,MATCH(INT(" & lookupValue & "),热熔胶型聚乙烯热收缩带!D:D,0))"
+                            newFormula = Replace(originalFormula, originalVlookupString, newFunctionString)
+                            cell.Formula = newFormula
+                            updatedCount = updatedCount + 1
+                        End If
+                    End If
+                    
+                Next cell
+                
+                ' 只要处理过含有公式的单元格，就记录工作表名
+                processedSheets = processedSheets & " - " & ws.Name & vbCrLf
+            End If
+            
+            Set formulaCells = Nothing
+        End If
+    Next ws
+    
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    
+    If updatedCount > 0 Then
+        MsgBox "处理完成！" & vbCrLf & vbCrLf & _
+               "共 " & updatedCount & " 个公式已被成功更新。" & vbCrLf & vbCrLf & _
+               "已扫描的工作表包括：" & vbCrLf & processedSheets, _
+               vbInformation, "任务完成"
+    Else
+        MsgBox "扫描完成，没有找到需要修改的公式。", vbInformation, "操作提示"
+    End If
+    
+End Sub
