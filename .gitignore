@@ -1,0 +1,54 @@
+# Excel files (except templates if needed)
+*.xlsm
+*.xlsx
+*.xls
+*.xlsb
+~$*.xl*
+
+# Temporary Excel files
+~$*
+
+# VBA backup files
+*.bak
+*.tmp
+
+# Windows thumbnail cache
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+/build/
+/dist/
+/bin/
+/obj/
+
+# Logs
+*.log
+
+# Backup folders
+/Backup_*/
+/备份_*/
+/拆分结果/
+/导出数据/
+/各工作表/
+
+# Test files
+/test/
+/tests/
+test_*.xlsm
+测试_*.xlsm
